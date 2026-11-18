@@ -9,7 +9,7 @@
 .door.l{left:0;transform-origin:left center}
 .door.r{right:0;transform-origin:right center}
 .door::before{content:"";position:absolute;inset:8% 13%;border:1px solid rgba(243,199,189,.35);border-radius:200px 200px 8px 8px;box-shadow:inset 0 0 0 10px rgba(255,255,255,.02)}
-.door::after{content:"";position:absolute;top:74%;width:7px;height:78px;margin-top:-39px;border-radius:6px;background:var(--metal);box-shadow:0 0 20px rgba(243,199,189,.6)}
+.door::after{content:"";position:absolute;top:84%;width:7px;height:78px;margin-top:-39px;border-radius:6px;background:var(--metal);box-shadow:0 0 20px rgba(243,199,189,.6)}
 .door.l::after{right:7%}.door.r::after{left:7%}
 #intro.open .door.l{transform:rotateY(80deg)}
 #intro.open .door.r{transform:rotateY(-80deg)}
@@ -125,7 +125,7 @@ header.top{position:sticky;top:0;z-index:50;background:rgba(255,246,249,.92);bac
 .btn-add .ico{width:17px;height:17px}
 
 /* ---- fitas diagonais ---- */
-.ribbons{position:relative;height:170px;overflow:hidden;margin:36px -16px;cursor:pointer}
+.ribbons{position:relative;height:170px;overflow:hidden;margin:36px calc(50% - 50vw);cursor:pointer}
 .ribbon{position:absolute;left:-10%;width:120%;top:50%;overflow:hidden;white-space:nowrap;text-transform:uppercase;font-weight:600;letter-spacing:.16em;font-size:13.5px;box-shadow:0 12px 30px rgba(58,15,36,.18)}
 .ribbon .track{display:inline-flex;animation:mq 26s linear infinite;padding:14px 0}
 .ribbon span{padding:0 20px;display:inline-flex;align-items:center;gap:20px}
