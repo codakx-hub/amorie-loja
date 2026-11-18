@@ -446,6 +446,12 @@ begin
   return v_code;
 end; $$;
 
+-- ---------- Permissões das tabelas (o RLS acima decide o que cada um vê) ----------
+grant usage on schema public to anon, authenticated;
+grant select on public.settings, public.categories, public.products to anon;
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
+
 -- ---------- Permissões das funções ----------
 revoke execute on function public.coupon_discount(text, numeric, uuid, text) from public, anon, authenticated;
 grant execute on function public.track_event(text, uuid, text) to anon, authenticated;
