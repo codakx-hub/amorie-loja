@@ -5,8 +5,8 @@
 // (tudo salvo só no navegador, ótimo para apresentar).
 // =============================================================
 export const CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  SUPABASE_URL: 'https://rtpsjfycfygksbleofup.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0cHNqZnljZnlna3NibGVvZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1MDk3NDQsImV4cCI6MjExMDA4NTc0NH0.AAuCLRzNjdoLtEQj0Lq3v0t_sDooiuzgk1aRmEqdcS4',
   // usuário do painel criado no Supabase (Authentication → Users)
   ADMIN_EMAIL: 'painel@amorielingerie.com',
 };
