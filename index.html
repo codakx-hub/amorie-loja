@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AMORIÊ Lingerie · Sex shop em Parauapebas</title>
+<meta name="description" content="AMORIÊ Lingerie: lingerie, sex shop, excitantes, géis, lubrificantes, óleos, vibradores e kits presente em Parauapebas–PA. Compra discreta e atendimento no WhatsApp.">
+<meta name="theme-color" content="#FFF6F9">
+<meta name="robots" content="index,follow">
+<meta property="og:title" content="AMORIÊ Lingerie">
+<meta property="og:description" content="Lingerie e sex shop com compra 100% discreta em Parauapebas–PA.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='32' fill='%23CF3465'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='Georgia' font-size='32' fill='%23fff'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;1,6..96,400&family=Pinyon+Script&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/base.css">
+<link rel="stylesheet" href="assets/css/store.css">
+</head>
+<body class="lock">
+
+<!-- Abertura -->
+<div id="intro" role="dialog" aria-label="Boas-vindas">
+  <div class="glow"></div>
+  <div class="door l"></div><div class="door r"></div>
+  <div class="intro-in">
+    <div id="introLogo"></div>
+    <h1 id="introTitle">Seja bem-vinda</h1>
+    <p id="introText"></p>
+    <button class="btn" id="btnEnter">Entrar na loja</button>
+    <div class="age">Conteúdo para maiores de 18 anos. Ao entrar, você confirma ter 18 anos ou mais.</div>
+  </div>
+  <video id="introVideo" playsinline muted hidden></video>
+  <button id="skipVideo" hidden>Pular ›</button>
+</div>
+
+<div id="demoBar" class="demo-bar" hidden>Modo demonstração: pedidos e cadastros ficam salvos só neste aparelho.</div>
+<div class="topbar" id="topbar" data-action="group"><div class="track" id="topTrack"></div></div>
+
+<header class="top">
+  <div class="wrap">
+    <div class="hrow">
+      <button class="iconbtn" data-action="menu" aria-label="Abrir menu" id="btnMenu"></button>
+      <a class="brand" href="#/" data-action="home" id="brand" aria-label="Início"></a>
+      <div class="search" id="searchDesk"></div>
+      <div class="hright">
+        <button class="iconbtn" data-action="account" aria-label="Minha conta" id="btnAcc"></button>
+        <button class="iconbtn" data-action="cart" aria-label="Sacola" id="btnCart"></button>
+      </div>
+    </div>
+    <div class="search-row">
+      <div class="search" id="searchBox">
+        <form class="sbox" id="sform" autocomplete="off" role="search">
+          <input id="sq" type="search" placeholder="O que você deseja hoje?" aria-label="Pesquisar produtos" enterkeyhint="search">
+          <button type="submit" aria-label="Buscar" id="sbtn"></button>
+        </form>
+        <div class="sugg" id="sugg" hidden></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <section class="hero">
+    <div class="lace"></div>
+    <div class="seal"><div><b>100%</b>compra<br>discreta</div></div>
+    <div class="hero-in">
+      <span class="kicker">Lingerie & sex shop</span>
+      <h2>Desperte o seu lado <em>mais ousado</em></h2>
+      <p>Lingeries, géis, óleos, lubrificantes e brinquedos escolhidos a dedo. Embalagem sem identificação, do pedido à entrega.</p>
+      <div class="ctas">
+        <a class="btn btn-pri" href="#produtos" data-action="scrollgrid">Ver produtos</a>
+        <button class="btn btn-ghost" data-action="group">Grupo VIP AMORIÊ</button>
+      </div>
+    </div>
+    <div class="hero-art" id="heroArt" aria-hidden="true"></div>
+  </section>
+
+  <nav class="chips" id="chips" aria-label="Categorias"></nav>
+
+  <div id="secFeat">
+    <div class="sec-h"><div><h3>Mais desejados</h3><div class="sub">Os queridinhos das clientes AMORIÊ</div></div></div>
+    <div class="hscroll" id="featRow"></div>
+  </div>
+
+  <div class="ribbons" data-action="group" aria-label="Grupo AMORIÊ">
+    <div class="ribbon r2"><div class="track" id="rb2"></div></div>
+    <div class="ribbon r1"><div class="track" id="rb1"></div></div>
+  </div>
+
+  <div id="secPromo">
+    <div class="sec-h"><div><h3>Promoções</h3><div class="sub">Preços especiais por tempo limitado</div></div><button class="btn btn-ghost btn-sm" data-action="promoall">Ver todas</button></div>
+    <div class="hscroll" id="promoRow"></div>
+  </div>
+
+  <div id="produtos" class="sec-h" style="scroll-margin-top:150px"><div><h3 id="gridTitle">Todos os produtos</h3><div class="sub" id="gridCount"></div></div><button class="btn btn-ghost btn-sm" id="clearFilter" data-action="clearfilter" hidden>Limpar ✕</button></div>
+  <div class="note" id="gridNote" hidden></div>
+  <div class="toolbar">
+    <div class="seg" role="group" aria-label="Filtro"><button class="on" data-promo="0">Todos</button><button data-promo="1">Somente promoção</button></div>
+    <select class="sel" id="sortSel" aria-label="Ordenar">
+      <option value="default">Ordenar: padrão</option>
+      <option value="az">Nome: A–Z</option>
+      <option value="low">Menor preço</option>
+      <option value="high">Maior preço</option>
+    </select>
+  </div>
+  <div class="grid" id="grid"><div class="spinner" style="grid-column:1/-1"></div></div>
+
+  <section class="vip" data-action="group" style="margin-top:40px">
+    <div id="vipLogo"></div>
+    <h3>Grupo AMORIÊ</h3>
+    <p>Exclusividade em novidades e descontos. Quem está no grupo fica sabendo primeiro dos lançamentos e das ofertas.</p>
+    <div class="perks"><span>✦ Novidades</span><span>✦ Cupons</span><span>✦ Pré-venda</span></div>
+    <span class="btn">Quero entrar no grupo</span>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div class="fbrand"><div id="footLogo"></div><p class="mt" id="footTag"></p><p class="mt" id="footAddr"></p></div>
+      <div><h5>Loja</h5><a href="#produtos" data-action="scrollgrid">Produtos</a><a href="#" data-action="promoall">Promoções</a><a href="#" data-action="howbuy">Como comprar</a><a href="#/conta" data-action="account">Minha conta</a></div>
+      <div><h5>Atendimento</h5><a href="#" data-action="wa" id="footPhone"></a><a href="#" data-action="group">Grupo VIP</a><a id="footInsta" target="_blank" rel="noopener">Instagram</a></div>
+      <div><h5>Pagamento</h5><p>Pix · Cartão · Dinheiro<br>Combinado no WhatsApp</p><h5 class="mt">Entrega</h5><p>Retirada na loja ou entrega em Parauapebas. Embalagem discreta.</p></div>
+    </div>
+    <p class="legal">Venda proibida para menores de 18 anos. © <span id="yr"></span> AMORIÊ Lingerie. Desenvolvido por CODAK-X.</p>
+  </div>
+</footer>
+
+<a class="fab" href="#" data-action="wa" aria-label="Falar no WhatsApp" id="fab"></a>
+
+<div class="ov" id="ov"></div>
+<aside class="drawer left" id="menu" aria-label="Menu"><div class="dhead"><span id="menuLogo"></span><button class="iconbtn" data-action="close" aria-label="Fechar" id="menuClose"></button></div><div class="dbody" id="menuBody"></div></aside>
+<aside class="drawer right" id="cartD" aria-label="Sacola"><div class="dhead"><h3>Sua sacola</h3><button class="iconbtn" data-action="close" aria-label="Fechar" id="cartClose"></button></div><div class="dbody" id="cartBody"></div><div class="dfoot" id="cartFoot"></div></aside>
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="box" id="modalBox"></div></div>
+
+<script type="module" src="assets/js/store.js"></script>
+</body>
+</html>
