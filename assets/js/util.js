@@ -123,5 +123,5 @@ export const PAY = { pix: 'Pix', cartao: 'Cartão', dinheiro: 'Dinheiro' };
 export function payText(pay, del) {
   if (pay === 'cartao') return del === 'entrega' ? 'Cartão na maquininha do entregador, na entrega' : 'Cartão na loja, na retirada';
   if (pay === 'dinheiro') return del === 'entrega' ? 'Dinheiro ao entregador, na entrega' : 'Dinheiro na loja, na retirada';
-  return 'Pix: a chave é enviada pelo WhatsApp';
+  return 'Pix: QR Code e código copia e cola na próxima tela';
 }

@@ -28,4 +28,9 @@ export const DEFAULT_SETTINGS = {
   abandonHours: 1,
   introVideo: '',
   logoUrl: '',
+  pixKeyType: 'celular',
+  pixKey: '(94) 99122-7330',
+  pixName: 'Juliane Mendes Boaes Sampaio',
+  pixBank: 'Itaú',
+  pixCity: 'Parauapebas',
 };

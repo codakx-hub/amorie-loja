@@ -265,3 +265,16 @@ footer a:hover{color:#fff}
 }
 .modal .box .mhead.bare{border:0;background:transparent;position:absolute;right:0;left:auto;top:0}
 .modal .box:has(.mhead.bare) .mbody{padding-top:34px}
+
+/* ---- Pix ---- */
+.pix-head{text-align:center}
+.pix-total{font-family:var(--serif);font-size:40px;color:var(--berry);line-height:1.1;margin:4px 0}
+.pix-qr{width:250px;height:250px;margin:14px auto 8px;border-radius:20px;background:#fff;border:1px solid var(--line);display:grid;place-items:center;box-shadow:var(--shadow-sm)}
+.pix-qr svg{width:230px;height:230px}
+.pix-code{display:flex;flex-direction:column;gap:8px;background:var(--blush-50);border:1px dashed var(--line-2);border-radius:14px;padding:12px;margin-top:6px}
+.pix-code code{font-size:11px;word-break:break-all;color:var(--text);max-height:64px;overflow:auto;font-family:ui-monospace,Menlo,monospace}
+.pix-key{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-top:10px}
+.pix-key b{display:block;font-size:16px;color:var(--berry)}
+.pix-key span{display:block}
+
+.hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;overflow:hidden}

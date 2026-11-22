@@ -195,6 +195,8 @@ export const backend = {
   async adminUpload(file) {
     requireAdmin();
     if (file.type.startsWith('video/')) throw new Error('No modo demonstração, cole o link do vídeo. O envio de vídeo funciona com o Supabase conectado.');
+    if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) throw new Error('Formato não permitido. Envie JPG, PNG, WEBP ou GIF.');
+    if (file.size > 10 * 1024 * 1024) throw new Error('Imagem muito grande (máx. 10 MB).');
     return await shrinkImage(file);
   },
   async adminSeedDemo() { requireAdmin(); seedDemo(load(), true); save(); },

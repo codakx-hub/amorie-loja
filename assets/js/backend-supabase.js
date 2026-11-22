@@ -1,13 +1,39 @@
 // MODO REAL: Supabase (banco, login das clientes, painel e fotos)
 import { CONFIG, DEFAULT_SETTINGS } from './config.js';
 import { digits, session, uid } from './util.js';
-import { seedDemo } from './backend-local.js';
+import { seedDemo, shrinkImage } from './backend-local.js';
 
-const SB_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
+// Restringe uploads: só imagens (até 10 MB, regravadas em JPEG sem metadados/GPS) e vídeos (até 50 MB)
+const IMG_OK = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const VID_OK = ['video/mp4', 'video/webm', 'video/quicktime'];
+async function safeUpload(file) {
+  if (IMG_OK.includes(file.type)) {
+    if (file.size > 10 * 1024 * 1024) throw new Error('Imagem muito grande (máx. 10 MB).');
+    const dataUrl = await shrinkImage(file, 1400);
+    const blob = await (await fetch(dataUrl)).blob();
+    return new File([blob], 'foto.jpg', { type: 'image/jpeg' });
+  }
+  if (VID_OK.includes(file.type)) { if (file.size > 50 * 1024 * 1024) throw new Error('Vídeo muito grande (máx. 50 MB).'); return file; }
+  throw new Error('Formato não permitido. Envie JPG, PNG, WEBP, GIF ou vídeo MP4/WEBM/MOV.');
+}
+
+// Biblioteca oficial do Supabase em versão fixa, com verificação de integridade (SRI):
+// se o arquivo do CDN for alterado por alguém, o navegador se recusa a executá-lo.
+const SB_SRC = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.js';
+const SB_SRI = 'sha384-TcHRA3zBbn+Lexh5n+Oil4guNPOS3rjNDpGRAN46u/s/mB2IZ50ceC6TYDU2yvgK';
 let sb = null, adm = null, createClient = null;
 
 async function lib() {
-  if (!createClient) ({ createClient } = await import(SB_URL));
+  if (!createClient) {
+    await new Promise((res, rej) => {
+      if (window.supabase?.createClient) return res();
+      const el = document.createElement('script');
+      el.src = SB_SRC; el.integrity = SB_SRI; el.crossOrigin = 'anonymous'; el.referrerPolicy = 'no-referrer';
+      el.onload = res; el.onerror = () => rej(new Error('Não foi possível carregar a loja. Verifique sua internet.'));
+      document.head.appendChild(el);
+    });
+    createClient = window.supabase.createClient;
+  }
   return createClient;
 }
 async function client() {
@@ -18,6 +44,8 @@ async function admin() {
   if (!adm) { const cc = await lib(); adm = cc(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, { auth: { storageKey: 'amorie-painel', storage: window.sessionStorage, persistSession: true } }); }
   return adm;
 }
+const PROFILE_COLS = 'id,name,whatsapp,cpf,birth_date,address';
+const ORDER_COLS = 'id,code,created_at,status,items,subtotal,discount,discount_detail,delivery_fee,total,delivery_method,payment_method';
 const chk = ({ data, error }) => { if (error) throw new Error(error.message || String(error)); return data; };
 const pinPass = pin => 'amorie-' + String(pin).trim();
 const sid = () => session.get('amorie_sid');
@@ -29,7 +57,7 @@ export const backend = {
     const [s, cats, prods] = await Promise.all([
       c.from('settings').select('data').eq('id', 1).maybeSingle(),
       c.from('categories').select('*').order('position'),
-      c.from('products').select('*').eq('active', true).order('position').order('created_at', { ascending: false }),
+      c.from('products').select('id,name,description,tags,price,promo_price,category_id,extra_categories,images,featured,active,stock,views,sold,position').eq('active', true).order('position').order('created_at', { ascending: false }),
     ]);
     return { settings: { ...DEFAULT_SETTINGS, ...(chk(s)?.data || {}) }, categories: chk(cats), products: chk(prods) };
   },
@@ -55,21 +83,22 @@ export const backend = {
   },
   async signOut() { const c = await client(); await c.auth.signOut(); },
   async resetPassword(email) { const c = await client(); chk(await c.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname + '#/conta' })); return true; },
-  async getProfile() { const c = await client(); const u = await this.currentUser(); if (!u) return null; const p = chk(await c.from('profiles').select('*').eq('id', u.id).maybeSingle()); return p ? { ...p, email: u.email } : { id: u.id, email: u.email, address: {} }; },
+  async getProfile() { const c = await client(); const u = await this.currentUser(); if (!u) return null; const p = chk(await c.from('profiles').select(PROFILE_COLS).eq('id', u.id).maybeSingle()); return p ? { ...p, email: u.email } : { id: u.id, email: u.email, address: {} }; },
   async saveProfile(p) {
     const c = await client(); const u = await this.currentUser(); if (!u) throw new Error('Entre na sua conta');
-    const row = { id: u.id, name: p.name, whatsapp: digits(p.whatsapp), address: p.address || {}, birth_date: p.birth_date || null };
+    const row = { name: String(p.name || '').trim().slice(0, 120), whatsapp: digits(p.whatsapp).slice(0, 13), address: p.address || {}, birth_date: p.birth_date || null };
     if (digits(p.cpf).length === 11) row.cpf = digits(p.cpf);
-    const { data, error } = await c.from('profiles').upsert(row).select().single();
-    if (error) throw new Error(/cpf/i.test(error.message) ? 'Este CPF já está cadastrado em outra conta.' : error.message);
-    return data;
+    let { data, error } = await c.from('profiles').update(row).eq('id', u.id).select(PROFILE_COLS).maybeSingle();
+    if (!error && !data) ({ data, error } = await c.from('profiles').insert({ id: u.id, ...row }).select(PROFILE_COLS).single());
+    if (error) throw new Error(/cpf/i.test(error.message) ? (/unique|duplicate/i.test(error.message) ? 'Este CPF já está cadastrado em outra conta.' : 'CPF inválido.') : /whatsapp/i.test(error.message) ? 'WhatsApp inválido.' : 'Não foi possível salvar seus dados.');
+    return { ...data, email: u.email };
   },
   async firstEligible() { const c = await client(); const { data } = await c.rpc('first_purchase_eligible'); return !!data; },
   async placeOrder(payload) {
     const c = await client(); const { data, error } = await c.rpc('place_order', { p: payload });
     if (error) throw new Error(error.message); return data;
   },
-  async myOrders() { const c = await client(); return chk(await c.from('orders').select('*').order('created_at', { ascending: false }).limit(50)); },
+  async myOrders() { const c = await client(); return chk(await c.from('orders').select(ORDER_COLS).order('created_at', { ascending: false }).limit(50)); },
   async myCoupons() { const c = await client(); return chk(await c.rpc('my_coupons')) || []; },
 
   // ---------- Painel ----------
@@ -122,7 +151,9 @@ export const backend = {
   async adminCartOffer(cartId, pct) { const a = await admin(); return chk(await a.rpc('admin_cart_offer', { p_cart: cartId, p_percent: pct })); },
   async adminSetCartStatus(id, status) { const a = await admin(); chk(await a.from('carts').update({ status }).eq('id', id)); },
   async adminUpload(file) {
-    const a = await admin(); const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const a = await admin();
+    file = await safeUpload(file);
+    const ext = file.type === 'image/jpeg' ? 'jpg' : (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 5);
     const path = `${file.type.startsWith('video/') ? 'videos' : 'fotos'}/${Date.now()}-${uid().slice(0, 8)}.${ext}`;
     chk(await a.storage.from('media').upload(path, file, { contentType: file.type, upsert: false }));
     return a.storage.from('media').getPublicUrl(path).data.publicUrl;

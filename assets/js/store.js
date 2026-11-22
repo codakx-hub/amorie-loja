@@ -4,6 +4,7 @@ import {
   $, $$, esc, BRL, digits, norm, uid, store, session, effPrice, isPromo, offPct, maskPhone, maskCPF, maskCEP,
   validCPF, waLink, moneyIn, dateBR, toast, icon, logoHTML, quote, STATUS, PAY, payText,
 } from './util.js';
+import { pixPayload, normalizeKey, qrSVG } from './pix.js';
 
 const S = { settings: {}, categories: [], products: [], user: null, profile: null, firstEligible: false };
 const view = { cat: 'all', q: '', promo: false, sort: 'default' };
@@ -259,11 +260,12 @@ async function refreshUser() {
   renderMenu();
 }
 function authForm(ctx) {
-  const tab = ck.authTab;
+  const tab = ck.authTab; ck.formAt = Date.now();
   return `<div class="authbox">
     <div class="authtabs"><button class="${tab === 'signup' ? 'on' : ''}" data-authtab="signup">Criar conta</button><button class="${tab === 'login' ? 'on' : ''}" data-authtab="login">Já tenho conta</button></div>
     ${tab === 'signup' ? `
       <div class="perk">${icon('ticket')}<span>Com CPF você ganha <b>${s().firstPercent}% de desconto</b> na 1ª compra e acumula benefícios.</span></div>
+      <div class="hp" aria-hidden="true"><label>Não preencha<input id="aSite" tabindex="-1" autocomplete="off"></label></div>
       <div class="field"><label for="aName">Nome completo</label><input class="inp" id="aName" autocomplete="name" value="${esc(ck.name || '')}"></div>
       <div class="grid2"><div class="field"><label for="aWa">WhatsApp</label><input class="inp" id="aWa" inputmode="tel" autocomplete="tel" placeholder="(94) 99999-9999" value="${esc(maskPhone(ck.whatsapp || ''))}"></div>
       <div class="field"><label for="aCpf">CPF <span class="muted">(para o desconto)</span></label><input class="inp" id="aCpf" inputmode="numeric" placeholder="000.000.000-00"><span class="hint" id="aCpfHint"></span></div></div>
@@ -286,6 +288,9 @@ async function doSignup(ctx) {
   if (!/^\S+@\S+\.\S+$/.test(email)) return toast('Informe um e-mail válido');
   if (pw.length < 6) return toast('A senha precisa ter pelo menos 6 caracteres');
   if (!$('#aAge').checked) return toast('Confirme que você tem 18 anos ou mais');
+  // anti-robô: campo invisível preenchido ou formulário enviado rápido demais
+  if ($('#aSite').value || Date.now() - (ck.formAt || 0) < 3000) return toast('Confira seus dados e tente de novo em alguns segundos.');
+  if (name.length > 120 || email.length > 160 || pw.length > 72) return toast('Algum campo está grande demais');
   ck.name = name; ck.whatsapp = whatsapp; syncCart();
   try { await api.signUp({ email, password: pw, name, whatsapp, cpf }); }
   catch (e) {
@@ -366,7 +371,7 @@ async function checkout() {
     </section>
     <section class="ck-sec"><h4><span class="n">3</span>Forma de pagamento</h4>
       <div class="opts" data-group="pay">
-        <button class="opt ${ck.pay === 'pix' ? 'on' : ''}" data-v="pix">${icon('pix')}<b>Pix</b><small>chave no WhatsApp</small></button>
+        <button class="opt ${ck.pay === 'pix' ? 'on' : ''}" data-v="pix">${icon('pix')}<b>Pix</b><small>QR Code na hora</small></button>
         <button class="opt ${ck.pay === 'cartao' ? 'on' : ''}" data-v="cartao">${icon('card')}<b>Cartão</b><small>na loja ou na entrega</small></button>
         <button class="opt ${ck.pay === 'dinheiro' ? 'on' : ''}" data-v="dinheiro">${icon('cash')}<b>Dinheiro</b><small>na retirada ou entrega</small></button>
       </div>
@@ -405,6 +410,7 @@ function errMsg(m) {
   if (m.includes('carrinho_vazio')) return 'Sua sacola está vazia ou os produtos saíram de linha.';
   if (m.includes('sem_estoque:')) return 'Sem estoque: ' + m.split('sem_estoque:')[1];
   if (m.includes('cupom:')) return m.split('cupom:')[1];
+  if (m.includes('muitas_tentativas')) return 'Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.';
   return 'Não foi possível enviar o pedido. Tente novamente ou chame no WhatsApp.';
 }
 async function placeOrder(btn) {
@@ -424,15 +430,48 @@ async function placeOrder(btn) {
       (order.delivery_method === 'entrega' ? `\nEntrega: ${+order.delivery_fee > 0 ? BRL(order.delivery_fee) : 'a combinar'}` : '') +
       `\n*Total: ${BRL(order.total)}*\n\nNome: ${order.customer_name}\nRecebimento: ${order.delivery_method === 'entrega' ? 'Entrega' : 'Retirada na loja'}` +
       (order.delivery_method === 'entrega' && a ? `\nEndereço: ${[a.street, a.number, a.complement, a.district].filter(Boolean).join(', ')}${a.reference ? ' (ref.: ' + a.reference + ')' : ''}` : '') +
-      `\nPagamento: ${payText(order.payment_method, order.delivery_method)}` + (order.change_for ? `\nTroco para: ${BRL(order.change_for)}` : '') + ($('#cObs')?.value.trim() ? `\nObs.: ${$('#cObs').value.trim()}` : '');
+      `\nPagamento: ${order.payment_method === 'pix' ? 'Pix' : payText(order.payment_method, order.delivery_method)}` + (order.change_for ? `\nTroco para: ${BRL(order.change_for)}` : '') + ($('#cObs')?.value.trim() ? `\nObs.: ${$('#cObs').value.trim()}` : '');
     cart = []; store.set('amorie_cart', cart); cartCoupon = null; store.set('amorie_coupon', null); renderCartBadge();
     cartId = uid(); store.set('amorie_cart_id', cartId);
     S.firstEligible = false;
+    if (order.payment_method === 'pix') return showPix(order, msg);
     const link = waLink(st.whatsapp, msg); window.open(link, '_blank');
     modal('Pedido recebido', `<div class="done"><div class="seal">${icon('check')}</div><h3>Obrigada, ${esc((order.customer_name || '').split(' ')[0])}!</h3><div class="code-pill">${esc(order.code)}</div><p class="muted">Seu pedido foi registrado. Se o WhatsApp não abriu, toque abaixo para enviar à loja.</p>
       <a class="btn btn-wa btn-block mt2" href="${link}" target="_blank" rel="noopener">${icon('wa')} Enviar no WhatsApp</a>
       <button class="btn btn-ghost btn-block mt" data-action="group">Entrar no Grupo AMORIÊ</button></div>`);
   } catch (e) { toast(errMsg(e.message), 4000); btn.disabled = false; btn.innerHTML = icon('wa') + ' Confirmar e enviar pedido'; }
+}
+
+/* ---------------- pagamento Pix ---------------- */
+async function copyText(t, okMsg) {
+  try { await navigator.clipboard.writeText(t); }
+  catch { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch { } ta.remove(); }
+  toast(okMsg);
+}
+function showPix(order, msg) {
+  const st = s();
+  const keyType = st.pixKeyType || 'celular';
+  const payload = pixPayload({ key: st.pixKey, keyType, name: st.pixName, city: st.pixCity, amount: +order.total, txid: String(order.code).replace(/[^A-Za-z0-9]/g, '') });
+  const keyShown = keyType === 'celular' ? maskPhone(st.pixKey) : st.pixKey;
+  const keyCopy = keyType === 'celular' ? normalizeKey(st.pixKey, 'celular') : st.pixKey;
+  const comprovante = msg + `\n\n✅ *Pagamento feito via Pix* (${BRL(order.total)}). Segue o comprovante 👇`;
+  const link = waLink(st.whatsapp, comprovante);
+  window._pix = { payload, keyCopy };
+  modal('Pague com Pix', `<div class="pix">
+    <div class="pix-head"><span class="muted">Pedido</span> <b>${esc(order.code)}</b><div class="pix-total">${BRL(order.total)}</div><div class="muted" style="font-size:12.5px">Pague o valor exato para confirmar seu pedido</div></div>
+    <div class="pix-qr" id="pixQr"><div class="spinner"></div></div>
+    <p class="hint" style="text-align:center">Abra o app do seu banco → <b>Pix</b> → <b>Ler QR Code</b></p>
+    <div class="lbl mt2">Ou use o Pix copia e cola</div>
+    <div class="pix-code"><code id="pixCode">${esc(payload)}</code><button class="btn btn-pri btn-sm" data-action="copypix">${icon('check')} Copiar código</button></div>
+    <div class="pix-key"><div><span class="muted" style="font-size:12px">Chave Pix (${esc(keyType)})</span><b>${esc(keyShown)}</b><span class="muted" style="font-size:12px">${esc(st.pixName || '')}${st.pixBank ? ' · ' + esc(st.pixBank) : ''}</span></div><button class="btn btn-ghost btn-sm" data-action="copykey">Copiar chave</button></div>
+    <div id="pixAfter" hidden>
+      <div class="perk mt2">${icon('check')}<span><b>Pagamento feito?</b> Agora envie o comprovante no WhatsApp da loja. A mensagem já vai com o número e os detalhes do pedido.</span></div>
+      <a class="btn btn-wa btn-block" href="${link}" target="_blank" rel="noopener">${icon('wa')} Enviar comprovante no WhatsApp</a>
+    </div>
+    <button class="btn btn-berry btn-block mt2" id="pixPaid" data-action="pixpaid">Já fiz o Pix</button>
+    <p class="hint mt" style="text-align:center">Confira o nome <b>${esc(st.pixName || '')}</b> antes de confirmar no banco.</p>
+  </div>`);
+  qrSVG(payload, 230).then(svg => { const b = $('#pixQr'); if (b) b.innerHTML = svg; }).catch(() => { const b = $('#pixQr'); if (b) b.innerHTML = '<p class="hint" style="padding:20px">QR Code indisponível agora. Use o código copia e cola abaixo.</p>'; });
 }
 
 /* ---------------- popup de saída ---------------- */
@@ -461,7 +500,7 @@ function armExit() {
 function resetIdle() { clearTimeout(idleT); idleT = setTimeout(() => { if (Object.keys(interest).length) showExit(); }, 40000); }
 async function exitCoupon(pid) {
   try { const r = await api.exitCoupon(pid); cartCoupon = null; await applyCoupon(r.code); if (!cart.some(x => x.id === pid)) cart.push({ id: pid, qty: 1 }); setCart(cart); closeAll(); openProduct(pid); toast(`Cupom ${r.code} aplicado na sacola 💕`, 4000); }
-  catch { toast('Não foi possível gerar o cupom agora'); }
+  catch (er) { toast(String(er.message).includes('muitas') ? 'Você já ganhou um cupom recentemente.' : 'Não foi possível gerar o cupom agora'); }
 }
 
 /* ---------------- ações ---------------- */
@@ -517,7 +556,11 @@ function bind() {
         case 'forgot': { const em = $('#lEmail').value.trim(); if (!/^\S+@\S+\.\S+$/.test(em)) return toast('Digite seu e-mail acima'); await api.resetPassword(em).catch(() => { }); toast(IS_DEMO ? 'No modo demonstração a senha não pode ser recuperada.' : 'Enviamos um link para redefinir sua senha.', 4000); break; }
         case 'logout': await api.signOut(); await refreshUser(); toast('Você saiu da conta'); el.dataset.ctx === 'checkout' ? checkout() : closeAll(); break;
         case 'saveprofile': try { S.profile = await api.saveProfile({ name: $('#pName').value.trim(), whatsapp: $('#pWa').value, cpf: $('#pCpf').disabled ? S.profile?.cpf : $('#pCpf').value, birth_date: $('#pBirth').value || null, address: readAddr('p') }); S.firstEligible = await api.firstEligible(); toast('Dados salvos'); account('dados'); } catch (er) { toast(er.message); } break;
+        case 'reload': location.reload(); break;
         case 'placeorder': placeOrder(el); break;
+        case 'copypix': copyText(window._pix?.payload || '', 'Código Pix copiado! Cole no app do seu banco.'); break;
+        case 'copykey': copyText(window._pix?.keyCopy || '', 'Chave Pix copiada!'); break;
+        case 'pixpaid': $('#pixAfter').hidden = false; el.hidden = true; $('#pixAfter').scrollIntoView({ behavior: 'smooth', block: 'center' }); break;
       }
       return;
     }
@@ -552,7 +595,7 @@ function route() {
   try {
     const c = await api.catalog(); Object.assign(S, c);
   } catch (e) {
-    $('#grid').innerHTML = `<div class="empty" style="grid-column:1/-1">Não foi possível carregar a loja agora. <br><br><button class="btn btn-pri btn-sm" onclick="location.reload()">Tentar de novo</button></div>`;
+    $('#grid').innerHTML = `<div class="empty" style="grid-column:1/-1">Não foi possível carregar a loja agora. <br><br><button class="btn btn-pri btn-sm" data-action="reload">Tentar de novo</button></div>`;
     return;
   }
   applyBrand(); intro(); renderAll();
