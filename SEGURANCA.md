@@ -21,3 +21,8 @@
 | 17 | Cabeçalhos de segurança | Content-Security-Policy e Referrer-Policy nas páginas. |
 | 18 | HTTPS | GitHub Pages com HTTPS obrigatório + `upgrade-insecure-requests`. |
 | 19 | Dependências | supabase-js atualizado de 2.45.4 para 2.118.0 (corrige CVE-2025-48370), versões fixas e verificação de integridade (SRI) nas bibliotecas externas. |
+
+## Security Advisor do Supabase
+- 0 erros. Avisos tratados no `05_hardening.sql`: pasta de fotos não pode ser listada; funções de cliente logada fechadas para visitante; verificação de administradora fora da API pública.
+- Avisos que ficam de propósito: `save_cart`, `track_event`, `create_exit_coupon` e `validate_coupon` precisam funcionar para visitante (sacola, estatísticas, cupom do popup). Todas têm limite de tentativas por IP e não devolvem dados de outras pessoas.
+- Ordem dos arquivos SQL: 01 → 02 → 03 → 04 → 05.
